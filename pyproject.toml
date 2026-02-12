@@ -12,6 +12,13 @@ license = { text = "MIT" }
 authors = [{ name = "Lux Contributors" }]
 dependencies = []
 
+[project.optional-dependencies]
+voice = [
+    "SpeechRecognition>=3.10",
+    "PyAudio>=0.2.13",
+    "pocketsphinx>=0.1.15",
+]
+
 [project.scripts]
 lux = "lux.cli:main"
 

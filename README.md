@@ -66,3 +66,34 @@ With a verifier command (recommended once your repo has tests/lints):
 ```bash
 lux run "fix failing tests" --verify "pytest -q"
 ```
+
+### Voice (speech in / out)
+
+You can give commands by voice and hear the agent’s response.
+
+**Install voice dependencies (optional):**
+
+```bash
+pip install -e ".[voice]"
+```
+
+This installs `SpeechRecognition`, `PyAudio`, and `pocketsphinx` for offline speech-to-text.  
+**TTS** uses the system: on macOS the built-in `say` command; on Linux install `espeak` (e.g. `apt install espeak`).
+
+**Single command by voice (then speak result):**
+
+```bash
+lux run --voice
+```
+
+Then speak when prompted; the agent runs with that goal and speaks the summary.
+
+**Interactive voice loop (listen → run → speak, repeat):**
+
+```bash
+lux voice
+```
+
+Say your goal each time; say “exit” or “quit” to stop. Use `--no-speak` to only print the response.
+
+**Notes:** Recognition is offline (Sphinx). For better accuracy you can install Whisper and use it from code (`listen(use_whisper=True)`). Microphone permission may be required (e.g. macOS System Preferences → Privacy → Microphone).
