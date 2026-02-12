@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lux"
+version = "0.1.0"
+description = "Local-first coding agent with a verifier-driven self-fix loop (Ollama-backed)."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Lux Contributors" }]
+dependencies = []
+
+[project.scripts]
+lux = "lux.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
