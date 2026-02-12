@@ -37,6 +37,8 @@ def cmd_run(args: argparse.Namespace) -> int:
         verify_cmd=args.verify,
         temperature=args.temperature,
         dry_run=args.dry_run,
+        allow_unsafe=args.unsafe,
+        max_consecutive_failures=args.max_failures,
     )
     trace = run_agent(root=root, goal=args.goal, cfg=cfg)
     print(json.dumps(trace, indent=2))
@@ -64,6 +66,17 @@ def build_parser() -> argparse.ArgumentParser:
         "--verify",
         default=None,
         help="Verification command to run after edits (e.g. 'python -m unittest -q' or 'pytest -q').",
+    )
+    r.add_argument(
+        "--unsafe",
+        action="store_true",
+        help="Allow risky commands (e.g. git push/reset/clean, chmod). Still denies rm -rf/sudo/curl|sh.",
+    )
+    r.add_argument(
+        "--max-failures",
+        type=int,
+        default=4,
+        help="Stop after this many consecutive command/verify failures.",
     )
     r.add_argument("--dry-run", action="store_true", help="Do not write files or run commands.")
     r.set_defaults(func=cmd_run)
