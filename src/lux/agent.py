@@ -20,6 +20,8 @@ class AgentConfig:
     verify_cmd: Optional[str] = None
     temperature: float = 0.2
     dry_run: bool = False
+    allow_unsafe: bool = False
+    max_consecutive_failures: int = 4
 
 
 SYSTEM = """You are Lux, a local-first coding agent.
@@ -75,6 +77,8 @@ def run_agent(root: Path, goal: str, cfg: AgentConfig) -> list[dict[str, Any]]:
     """
     trace: list[dict[str, Any]] = []
     last: Optional[CmdResult] = None
+    consecutive_failures = 0
+    seen_actions: set[str] = set()
 
     if not ollama_available():
         if cfg.dry_run:
@@ -101,6 +105,24 @@ def run_agent(root: Path, goal: str, cfg: AgentConfig) -> list[dict[str, Any]]:
         context = _context_snapshot(root, last)
         prompt = _prompt(goal, verify_cmd=cfg.verify_cmd, context=context)
 
+        if last is not None and last.exit_code != 0:
+            consecutive_failures += 1
+        else:
+            consecutive_failures = 0
+
+        if consecutive_failures >= cfg.max_consecutive_failures:
+            trace.append(
+                {
+                    "step": step,
+                    "action": {"type": "finish"},
+                    "result": {
+                        "summary": "Stopped after repeated failures (self-fix budget exceeded).",
+                        "next": "Inspect the last failure (stdout/stderr tails in trace). If you want, paste that error here and we can tighten the verifier or guardrails.",
+                    },
+                }
+            )
+            break
+
         try:
             raw = ollama_chat(prompt=prompt, config=llm_cfg, system=SYSTEM)
         except OllamaError as e:
@@ -116,6 +138,21 @@ def run_agent(root: Path, goal: str, cfg: AgentConfig) -> list[dict[str, Any]]:
         if not isinstance(action, dict) or "type" not in action:
             trace.append({"step": step, "error": "Action must be an object with a 'type' field", "raw": raw})
             break
+
+        action_key = json.dumps(action, sort_keys=True)
+        if action_key in seen_actions:
+            trace.append(
+                {
+                    "step": step,
+                    "action": {"type": "finish"},
+                    "result": {
+                        "summary": "Stopped: detected repeating the same action (loop guard).",
+                        "next": "Try adding a verifier command (--verify ...) and/or rephrase the goal to be more specific about what success looks like.",
+                    },
+                }
+            )
+            break
+        seen_actions.add(action_key)
 
         a_type: ActionType = action["type"]  # type: ignore[assignment]
         record: dict[str, Any] = {"step": step, "action": action}
@@ -154,7 +191,7 @@ def run_agent(root: Path, goal: str, cfg: AgentConfig) -> list[dict[str, Any]]:
                     last = CmdResult(command=cfg.verify_cmd, exit_code=0, stdout="(dry-run)", stderr="")
                     trace.append({"step": step, "verify": {"dry_run": True, "command": cfg.verify_cmd}})
                 else:
-                    last = run_cmd(root, cfg.verify_cmd)
+                    last = run_cmd(root, cfg.verify_cmd, allow_unsafe=cfg.allow_unsafe)
                     trace.append({"step": step, "verify": vars(last)})
             else:
                 last = None
@@ -172,7 +209,7 @@ def run_agent(root: Path, goal: str, cfg: AgentConfig) -> list[dict[str, Any]]:
                 last = CmdResult(command=command, exit_code=0, stdout="(dry-run)", stderr="")
                 record["result"] = vars(last)
             else:
-                last = run_cmd(root, command)
+                last = run_cmd(root, command, allow_unsafe=cfg.allow_unsafe)
                 record["result"] = vars(last)
 
             trace.append(record)
