@@ -18,10 +18,9 @@ ollama pull llama3.1:8b
 - Install this package (editable):
 
 ```bash
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 pip install -e .
-pip install -e ".[voice]"
 ```
 
 ### Safe Ollama setup
