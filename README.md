@@ -21,6 +21,7 @@ ollama pull llama3.1:8b
 python -m venv .venv
 source .venv/bin/activate
 pip install -e .
+pip install -e ".[voice]"
 ```
 
 ### Safe Ollama setup
